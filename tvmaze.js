@@ -36,7 +36,7 @@ async function getShowsByTerm(q) {
   };
 };
 
-/** Given list of shows, create markup for each and to DOM */
+// Function to populate shows in the DOM
 function populateShows(shows) {
   $showsList.empty();
 
@@ -52,15 +52,22 @@ function populateShows(shows) {
              <h5 class="text-primary">${show.name}</h5>
              <div><small>${show.summary}</small></div>
              <button class="btn btn-outline-light btn-sm Show-getEpisodes">
-               Episodes
+             Episodes
+             </button>
+             <button class="btn btn-outline-light btn-sm Show-getCast">
+               Cast
              </button>
            </div>
          </div>
        </div>
       `);
-// Attach click event listener to the "Episodes" button
-const $episodesButton = $(".Show-getEpisodes");
-$episodesButton.on("click", async function() {
+
+    $showsList.append($show);
+  }
+};
+
+// Attach click event listener using event delegation for the "Episodes" button
+$showsList.on("click", ".Show-getEpisodes", async function() {
   const showId = $(this).closest('.Show').data("show-id");
   const episodes = await getEpisodesOfShow(showId);
   populateEpisodesInModal(episodes);
@@ -72,11 +79,18 @@ $episodesButton.on("click", async function() {
   myModal.show();
 });
 
+// Attach click event listener using event delegation for the "Cast" button
+$showsList.on("click", ".Show-getCast", async function() {
+  const showId = $(this).closest('.Show').data("show-id");
+  const castMembers = await getCastOfShow(showId);
+  populateCastInModal(castMembers);
 
-    $showsList.append($show);
-  };
-};
-
+  // Show the cast modal without backdrop
+  const castModal = new bootstrap.Modal(document.getElementById('castModal'), {
+    backdrop: false
+  });
+  castModal.show();
+});
 
 /** Handle search form submission: get shows from API and display.
  *    Hide episodes area (that only gets shown if they ask for episodes)
@@ -111,6 +125,20 @@ async function getEpisodesOfShow(id) {
   };
 };
 
+async function getCastOfShow(id) {
+  try {
+    const res = await axios.get(`https://api.tvmaze.com/shows/${id}/cast`);
+    return res.data.map(castMember => ({
+      id: castMember.person.id,
+      name: castMember.person.name,
+      character: castMember.character.name,
+    }));
+  } catch (error) {
+    console.error('Error fetching cast:', error);
+    return [];
+  }
+};
+
 // Function to populate episodes in the modal
 async function populateEpisodesInModal(episodes) {
   const ulElement = document.querySelector('#episodesListModal');
@@ -120,6 +148,19 @@ async function populateEpisodesInModal(episodes) {
   episodes.forEach(episode => {
     const liElement = document.createElement("li");
     liElement.innerText = `Episode ${episode.number} (Season ${episode.season}): ${episode.name}`;
+    ulElement.appendChild(liElement);
+  });
+};
+
+// Function to populate cast members in the modal
+async function populateCastInModal(castMembers) {
+  const ulElement = document.querySelector('#castListModal');
+  ulElement.innerHTML = ""; // Clear any previous cast members
+
+  // Loop through each cast member and create a list item for each one
+  castMembers.forEach(castMember => {
+    const liElement = document.createElement("li");
+    liElement.innerText = `${castMember.name} as ${castMember.character}`;
     ulElement.appendChild(liElement);
   });
 };
